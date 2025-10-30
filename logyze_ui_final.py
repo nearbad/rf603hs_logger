@@ -353,7 +353,7 @@ class RF603Sensor:
                 port=port,
                 baudrate=baudrate,
                 bytesize=serial.EIGHTBITS,
-                parity=serial.PARITY_ODD,
+                parity=serial.PARITY_EVEN,
                 stopbits=serial.STOPBITS_ONE,
                 timeout=timeout
             )
@@ -380,15 +380,31 @@ class RF603Sensor:
             self.serial_port.reset_input_buffer()
             self.send_request(address, 0x01)
             time.sleep(0.1)
-            
+
             response = self.serial_port.read(16)
-            if len(response) >= 8:
-                device_type = self._decode_byte(response[0:2])
-                firmware_ver = self._decode_byte(response[2:4])
-                serial_num = self._decode_word(response[4:8])
-                
-                print(f"✅ Датчик: тип {device_type}, прошивка {firmware_ver}, S/N {serial_num}")
-                return True
+            if len(response) >= 16:
+                # Декодируем ответ идентификации
+                decoded_bytes = []
+                i = 0
+                while i < len(response) - 1:
+                    if (response[i] & 0x80) and (response[i+1] & 0x80):
+                        low = response[i] & 0x0F
+                        high = response[i+1] & 0x0F
+                        decoded_bytes.append(low | (high << 4))
+                        i += 2
+                    else:
+                        i += 1
+
+                if len(decoded_bytes) >= 8:
+                    device_type = decoded_bytes[0]
+                    firmware_ver = decoded_bytes[1]
+                    serial_num = decoded_bytes[2] | (decoded_bytes[3] << 8)
+                    base_distance = decoded_bytes[4] | (decoded_bytes[5] << 8)
+                    measurement_range = decoded_bytes[6] | (decoded_bytes[7] << 8)
+
+                    print(f"✅ Датчик: тип {device_type}, прошивка {firmware_ver}, S/N {serial_num}")
+                    print(f"   Базовое расстояние: {base_distance} мм, Диапазон: {measurement_range} мм")
+                    return True
             return False
         except Exception as e:
             print(f"❌ Ошибка идентификации: {e}")
@@ -396,9 +412,14 @@ class RF603Sensor:
     
     def start_stream(self, address=1):
         try:
+            # Очистка буфера перед запуском потока
             self.serial_port.reset_input_buffer()
-            self.send_request(address, 0x07)
             time.sleep(0.05)
+
+            # Запуск потока данных
+            self.send_request(address, 0x07)
+            time.sleep(0.1)  # Даем датчику время начать передачу
+
             return True
         except:
             return False
@@ -410,29 +431,100 @@ class RF603Sensor:
             return True
         except:
             return False
-    
+
+    def find_packet_start(self, timeout=2.0):
+        """
+        Поиск начала пакета данных
+        Ищет два последовательных байта со старшим битом = 1
+        """
+        start_time = time.time()
+        byte_buffer = []
+
+        while (time.time() - start_time) < timeout:
+            if self.serial_port.in_waiting > 0:
+                byte = self.serial_port.read(1)
+                if len(byte) > 0:
+                    byte_buffer.append(byte[0])
+
+                    # Ищем последовательность из двух байтов с битом 0x80
+                    if len(byte_buffer) >= 2:
+                        if (byte_buffer[-2] & 0x80) and (byte_buffer[-1] & 0x80):
+                            # Проверяем, что это похоже на начало пакета данных
+                            sb = (byte_buffer[-2] >> 6) & 0x01  # Status bit
+                            cnt = (byte_buffer[-2] >> 4) & 0x03  # Counter
+                            # Если это выглядит как данные, возвращаем эти два байта
+                            return bytes(byte_buffer[-2:])
+
+                        # Сохраняем только последний байт для следующей проверки
+                        byte_buffer = byte_buffer[-1:]
+            else:
+                time.sleep(0.001)
+
+        return None
+
     def read_measurement(self):
+        """
+        Чтение измерения с проверкой формата пакета
+        Возвращает (value, valid) где valid - True если пакет корректный
+        """
         try:
             if self.serial_port.in_waiting >= 2:
                 data = self.serial_port.read(2)
                 if len(data) == 2:
-                    value = self._decode_byte(data)
-                    return value
+                    value, status_bit, counter, valid = self._decode_measurement_packet(data[0], data[1])
+                    if valid:
+                        return value
             return None
         except:
             return None
-    
+
+    def _decode_measurement_packet(self, byte1, byte2):
+        """
+        Декодирование пакета измерения из двух байтов
+        Формат согласно документации (п. 11.5.5):
+        Байт 0: 1 SB CNT(1:0) DAT(3:0)
+        Байт 1: 1 SB CNT(1:0) DAT(7:4)
+
+        Возвращает: (value, status_bit, counter, valid)
+        """
+        # Проверка, что оба байта имеют старший бит
+        if not ((byte1 & 0x80) and (byte2 & 0x80)):
+            return None, None, None, False
+
+        # Извлечение полей из первого байта
+        sb1 = (byte1 >> 6) & 0x01  # Status bit
+        cnt1 = (byte1 >> 4) & 0x03  # Counter
+        low_nibble = byte1 & 0x0F  # Младшие 4 бита значения
+
+        # Извлечение полей из второго байта
+        sb2 = (byte2 >> 6) & 0x01
+        cnt2 = (byte2 >> 4) & 0x03
+        high_nibble = byte2 & 0x0F  # Старшие 4 бита значения
+
+        # Проверка согласованности
+        if sb1 != sb2 or cnt1 != cnt2:
+            return None, None, None, False
+
+        # Сборка значения
+        value = low_nibble | (high_nibble << 4)
+
+        return value, sb1, cnt1, True
+
     def _decode_byte(self, data):
+        """Декодирование одного байта из двух байтов протокола"""
         if len(data) >= 2:
-            return ((data[0] & 0x7F) << 7) | (data[1] & 0x7F)
+            if (data[0] & 0x80) and (data[1] & 0x80):
+                low = data[0] & 0x0F
+                high = data[1] & 0x0F
+                return low | (high << 4)
         return 0
-    
+
     def _decode_word(self, data):
+        """Декодирование слова (word) из четырех байтов протокола"""
         if len(data) >= 4:
-            return (((data[0] & 0x7F) << 21) | 
-                    ((data[1] & 0x7F) << 14) | 
-                    ((data[2] & 0x7F) << 7) | 
-                    (data[3] & 0x7F))
+            byte1 = self._decode_byte(data[0:2])
+            byte2 = self._decode_byte(data[2:4])
+            return byte1 | (byte2 << 8)
         return 0
 
 
@@ -459,27 +551,57 @@ class RecordingThread(QThread):
         """Основной цикл записи"""
         self.running = True
         self.data_list = []
-        
-        start_time = time.perf_counter()
-        point = 0
-        
+
         try:
+            # === СИНХРОНИЗАЦИЯ ===
+            # Ищем начало пакета перед началом записи
+            print("🔍 Поиск начала пакета...")
+            initial_packet = self.sensor.find_packet_start(timeout=3.0)
+
+            if initial_packet is None:
+                self.error_occurred.emit("Не удалось синхронизироваться с потоком данных")
+                return
+
+            print("✅ Синхронизация успешна, начинаем запись...")
+
+            # === ОСНОВНОЙ ЦИКЛ ЗАПИСИ ===
+            start_time = time.perf_counter()
+            point = 0
+
+            # Обрабатываем первый пакет, полученный при синхронизации
+            byte1, byte2 = initial_packet[0], initial_packet[1]
+            value, status_bit, counter, valid = self.sensor._decode_measurement_packet(byte1, byte2)
+
+            if valid and value is not None and value > 0:
+                distance = self.base_distance + (value * self.measurement_range / 16384.0)
+                current_time = time.perf_counter() - start_time
+
+                self.data_list.append({
+                    'Distance_mm': distance,
+                    'Point': point,
+                    'Time_s': current_time
+                })
+
+                self.data_received.emit(distance, point, current_time)
+                point += 1
+
+            # Продолжаем читать данные
             while self.running:
                 value = self.sensor.read_measurement()
-                
-                if value is not None:
+
+                if value is not None and value > 0:
                     distance = self.base_distance + (value * self.measurement_range / 16384.0)
                     current_time = time.perf_counter() - start_time
-                    
+
                     self.data_list.append({
                         'Distance_mm': distance,
                         'Point': point,
                         'Time_s': current_time
                     })
-                    
+
                     self.data_received.emit(distance, point, current_time)
                     point += 1
-                
+
                 time.sleep(0.0001)
             
             # Сохранение
