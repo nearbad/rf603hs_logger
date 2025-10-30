@@ -22,7 +22,8 @@ from PyQt5.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QLabel, QComboBox, QLineEdit, QTextEdit, QFileDialog,
     QGroupBox, QSpinBox, QDoubleSpinBox, QMessageBox, QSplitter,
-    QTabWidget, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView
+    QTabWidget, QCheckBox, QTableWidget, QTableWidgetItem, QHeaderView,
+    QRadioButton
 )
 from PyQt5.QtCore import QThread, pyqtSignal, Qt, QTimer
 from PyQt5.QtGui import QFont, QCursor
