@@ -1202,15 +1202,15 @@ class MainWindow(QMainWindow):
         self.right_layout = QVBoxLayout()
         self.right_panel.setLayout(self.right_layout)
         
-        # График для записи (один)
+        # График для записи (один, показывает среднее значение)
         self.plot_recording = InteractivePlotWidget('time')
         self.right_layout.addWidget(self.plot_recording)
-        
-        # Графики для анализа (два) - скрыты по умолчанию
-        self.plot_time = InteractivePlotWidget('time')
-        self.plot_points = InteractivePlotWidget('points')
-        self.plot_time.hide()
-        self.plot_points.hide()
+
+        # Графики для анализа - ДВА графика времени для двух датчиков (скрыты по умолчанию)
+        self.plot_time_sensor1 = InteractivePlotWidget('time')
+        self.plot_time_sensor2 = InteractivePlotWidget('time')
+        self.plot_time_sensor1.hide()
+        self.plot_time_sensor2.hide()
         
         # Splitter
         splitter = QSplitter(Qt.Horizontal)
@@ -1264,62 +1264,127 @@ class MainWindow(QMainWindow):
         return panel
     
     def create_connection_tab(self):
-        """Вкладка подключения"""
+        """Вкладка подключения для двух датчиков"""
         tab = QWidget()
-        layout = QVBoxLayout()
-        
-        port_group = QGroupBox("Настройки подключения")
-        port_layout = QVBoxLayout()
-        
-        h1 = QHBoxLayout()
-        h1.addWidget(QLabel("COM-порт:"))
-        self.combo_port = QComboBox()
-        h1.addWidget(self.combo_port)
-        btn_refresh = QPushButton("🔄")
-        btn_refresh.setMaximumWidth(40)
+        main_layout = QVBoxLayout()
+
+        # Кнопка обновления портов (общая для обоих датчиков)
+        btn_refresh = QPushButton("🔄 Обновить список портов")
         btn_refresh.clicked.connect(self.refresh_ports)
-        h1.addWidget(btn_refresh)
-        port_layout.addLayout(h1)
-        
-        h2 = QHBoxLayout()
-        h2.addWidget(QLabel("Baud Rate:"))
-        self.combo_baudrate = QComboBox()
-        self.combo_baudrate.addItems([str(b) for b in RF603Sensor.BAUDRATES])
-        self.combo_baudrate.setCurrentText("9600")
-        h2.addWidget(self.combo_baudrate)
-        port_layout.addLayout(h2)
-        
-        h3 = QHBoxLayout()
-        h3.addWidget(QLabel("Адрес:"))
-        self.spin_address = QSpinBox()
-        self.spin_address.setRange(1, 127)
-        self.spin_address.setValue(1)
-        h3.addWidget(self.spin_address)
-        port_layout.addLayout(h3)
-        
-        port_group.setLayout(port_layout)
-        layout.addWidget(port_group)
-        
-        btn_layout = QVBoxLayout()
-        
-        self.btn_connect = QPushButton("Подключиться")
-        self.btn_connect.clicked.connect(self.connect_sensor)
-        btn_layout.addWidget(self.btn_connect)
-        
-        self.btn_identify = QPushButton("Идентификация")
-        self.btn_identify.clicked.connect(self.identify_sensor)
-        self.btn_identify.setEnabled(False)
-        btn_layout.addWidget(self.btn_identify)
-        
-        self.btn_disconnect = QPushButton("Отключиться")
-        self.btn_disconnect.clicked.connect(self.disconnect_sensor)
-        self.btn_disconnect.setEnabled(False)
-        btn_layout.addWidget(self.btn_disconnect)
-        
-        layout.addLayout(btn_layout)
-        layout.addStretch()
-        
-        tab.setLayout(layout)
+        main_layout.addWidget(btn_refresh)
+
+        # ДАТЧИК 1
+        sensor1_group = QGroupBox("⚙️ ДАТЧИК 1")
+        sensor1_layout = QVBoxLayout()
+
+        h1_1 = QHBoxLayout()
+        h1_1.addWidget(QLabel("COM-порт:"))
+        self.combo_port1 = QComboBox()
+        h1_1.addWidget(self.combo_port1)
+        sensor1_layout.addLayout(h1_1)
+
+        h1_2 = QHBoxLayout()
+        h1_2.addWidget(QLabel("Baud Rate:"))
+        self.combo_baudrate1 = QComboBox()
+        self.combo_baudrate1.addItems([str(b) for b in RF603Sensor.BAUDRATES])
+        self.combo_baudrate1.setCurrentText("9600")
+        h1_2.addWidget(self.combo_baudrate1)
+        sensor1_layout.addLayout(h1_2)
+
+        h1_3 = QHBoxLayout()
+        h1_3.addWidget(QLabel("Адрес:"))
+        self.spin_address1 = QSpinBox()
+        self.spin_address1.setRange(1, 127)
+        self.spin_address1.setValue(1)
+        h1_3.addWidget(self.spin_address1)
+        sensor1_layout.addLayout(h1_3)
+
+        self.btn_connect1 = QPushButton("Подключить датчик 1")
+        self.btn_connect1.clicked.connect(lambda: self.connect_sensor(1))
+        sensor1_layout.addWidget(self.btn_connect1)
+
+        self.btn_identify1 = QPushButton("Идентификация датчика 1")
+        self.btn_identify1.clicked.connect(lambda: self.identify_sensor(1))
+        self.btn_identify1.setEnabled(False)
+        sensor1_layout.addWidget(self.btn_identify1)
+
+        self.btn_change_baudrate1 = QPushButton("Изменить Baud Rate")
+        self.btn_change_baudrate1.clicked.connect(lambda: self.change_baudrate(1))
+        self.btn_change_baudrate1.setEnabled(False)
+        sensor1_layout.addWidget(self.btn_change_baudrate1)
+
+        self.btn_disconnect1 = QPushButton("Отключить датчик 1")
+        self.btn_disconnect1.clicked.connect(lambda: self.disconnect_sensor(1))
+        self.btn_disconnect1.setEnabled(False)
+        sensor1_layout.addWidget(self.btn_disconnect1)
+
+        self.label_status1 = QLabel("Статус: Не подключен")
+        sensor1_layout.addWidget(self.label_status1)
+
+        sensor1_group.setLayout(sensor1_layout)
+        main_layout.addWidget(sensor1_group)
+
+        # ДАТЧИК 2
+        sensor2_group = QGroupBox("⚙️ ДАТЧИК 2")
+        sensor2_layout = QVBoxLayout()
+
+        h2_1 = QHBoxLayout()
+        h2_1.addWidget(QLabel("COM-порт:"))
+        self.combo_port2 = QComboBox()
+        h2_1.addWidget(self.combo_port2)
+        sensor2_layout.addLayout(h2_1)
+
+        h2_2 = QHBoxLayout()
+        h2_2.addWidget(QLabel("Baud Rate:"))
+        self.combo_baudrate2 = QComboBox()
+        self.combo_baudrate2.addItems([str(b) for b in RF603Sensor.BAUDRATES])
+        self.combo_baudrate2.setCurrentText("9600")
+        h2_2.addWidget(self.combo_baudrate2)
+        sensor2_layout.addLayout(h2_2)
+
+        h2_3 = QHBoxLayout()
+        h2_3.addWidget(QLabel("Адрес:"))
+        self.spin_address2 = QSpinBox()
+        self.spin_address2.setRange(1, 127)
+        self.spin_address2.setValue(1)
+        h2_3.addWidget(self.spin_address2)
+        sensor2_layout.addLayout(h2_3)
+
+        self.btn_connect2 = QPushButton("Подключить датчик 2")
+        self.btn_connect2.clicked.connect(lambda: self.connect_sensor(2))
+        sensor2_layout.addWidget(self.btn_connect2)
+
+        self.btn_identify2 = QPushButton("Идентификация датчика 2")
+        self.btn_identify2.clicked.connect(lambda: self.identify_sensor(2))
+        self.btn_identify2.setEnabled(False)
+        sensor2_layout.addWidget(self.btn_identify2)
+
+        self.btn_change_baudrate2 = QPushButton("Изменить Baud Rate")
+        self.btn_change_baudrate2.clicked.connect(lambda: self.change_baudrate(2))
+        self.btn_change_baudrate2.setEnabled(False)
+        sensor2_layout.addWidget(self.btn_change_baudrate2)
+
+        self.btn_disconnect2 = QPushButton("Отключить датчик 2")
+        self.btn_disconnect2.clicked.connect(lambda: self.disconnect_sensor(2))
+        self.btn_disconnect2.setEnabled(False)
+        sensor2_layout.addWidget(self.btn_disconnect2)
+
+        self.label_status2 = QLabel("Статус: Не подключен")
+        sensor2_layout.addWidget(self.label_status2)
+
+        sensor2_group.setLayout(sensor2_layout)
+        main_layout.addWidget(sensor2_group)
+
+        # Кнопка отключения обоих датчиков
+        self.btn_disconnect_all = QPushButton("❌ Отключить ОБА датчика")
+        self.btn_disconnect_all.clicked.connect(self.disconnect_all_sensors)
+        self.btn_disconnect_all.setEnabled(False)
+        self.btn_disconnect_all.setStyleSheet("background-color: #ff6b6b; color: white; font-weight: bold; padding: 10px;")
+        main_layout.addWidget(self.btn_disconnect_all)
+
+        main_layout.addStretch()
+
+        tab.setLayout(main_layout)
         return tab
     
     def create_recording_tab(self):
@@ -1351,17 +1416,17 @@ class MainWindow(QMainWindow):
         
         record_group = QGroupBox("Запись данных")
         record_layout = QVBoxLayout()
-        
+
         h3 = QHBoxLayout()
         h3.addWidget(QLabel("Имя файла:"))
         self.edit_filename = QLineEdit()
         self.edit_filename.setPlaceholderText("Авто (дата-время)")
         h3.addWidget(self.edit_filename)
         record_layout.addLayout(h3)
-        
-        self.label_status = QLabel("Статус: Не записывается")
-        record_layout.addWidget(self.label_status)
-        
+
+        self.label_rec_status = QLabel("Статус: Не записывается")
+        record_layout.addWidget(self.label_rec_status)
+
         self.label_points = QLabel("Точек: 0")
         record_layout.addWidget(self.label_points)
         
@@ -1414,24 +1479,31 @@ class MainWindow(QMainWindow):
         file_group.setLayout(file_layout)
         layout.addWidget(file_group)
         
-        results_group = QGroupBox("Результаты анализа")
+        results_group = QGroupBox("Результаты анализа (ДВА датчика)")
         results_layout = QVBoxLayout()
-        
-        self.label_period = QLabel("Период: -")
-        results_layout.addWidget(self.label_period)
-        
-        self.label_frequency = QLabel("Частота: -")
-        results_layout.addWidget(self.label_frequency)
-        
-        self.label_decrement = QLabel("Лог. декремент: -")
-        results_layout.addWidget(self.label_decrement)
-        
-        self.label_damping = QLabel("Коэфф. демпфирования: -")
-        results_layout.addWidget(self.label_damping)
-        
-        self.label_loss = QLabel("Коэфф. потерь: -")
-        results_layout.addWidget(self.label_loss)
-        
+
+        # Таблица с двумя колонками для двух датчиков
+        self.results_table = QTableWidget()
+        self.results_table.setColumnCount(2)
+        self.results_table.setHorizontalHeaderLabels(["Датчик 1", "Датчик 2"])
+        self.results_table.setRowCount(5)
+        self.results_table.setVerticalHeaderLabels([
+            "Период (T), с",
+            "Частота (f), Гц",
+            "Лог. декремент (δ)",
+            "Коэфф. демпфирования (ζ)",
+            "Коэфф. потерь (η)"
+        ])
+        self.results_table.horizontalHeader().setStretchLastSection(True)
+        self.results_table.setMaximumHeight(200)
+
+        # Заполняем пустыми значениями
+        for row in range(5):
+            for col in range(2):
+                self.results_table.setItem(row, col, QTableWidgetItem("-"))
+
+        results_layout.addWidget(self.results_table)
+
         results_group.setLayout(results_layout)
         layout.addWidget(results_group)
         
@@ -1453,7 +1525,24 @@ class MainWindow(QMainWindow):
         """Вкладка редактирования"""
         tab = QWidget()
         layout = QVBoxLayout()
-        
+
+        # ВЫБОР АКТИВНОГО ДАТЧИКА
+        sensor_select_group = QGroupBox("🎯 Выбор датчика для редактирования")
+        sensor_select_layout = QHBoxLayout()
+
+        self.radio_sensor1 = QRadioButton("Датчик 1")
+        self.radio_sensor1.setChecked(True)
+        self.radio_sensor1.clicked.connect(lambda: self.set_active_sensor(1))
+
+        self.radio_sensor2 = QRadioButton("Датчик 2")
+        self.radio_sensor2.clicked.connect(lambda: self.set_active_sensor(2))
+
+        sensor_select_layout.addWidget(self.radio_sensor1)
+        sensor_select_layout.addWidget(self.radio_sensor2)
+
+        sensor_select_group.setLayout(sensor_select_layout)
+        layout.addWidget(sensor_select_group)
+
         # БОЛЬШАЯ КНОПКА ПЕРЕСЧЕТА
         recalc_group = QGroupBox("⚡ Обновление результатов")
         recalc_layout = QVBoxLayout()
@@ -1571,121 +1660,224 @@ class MainWindow(QMainWindow):
         """Вывод в консоль"""
         self.console.append(message)
         print(message)
+
+    def set_active_sensor(self, sensor_num):
+        """Установка активного датчика для редактирования"""
+        self.active_sensor = sensor_num
+        self.log(f"🎯 Активный датчик для редактирования: {sensor_num}")
+
+        # Обновляем счетчик пиков
+        active_analyzer = self.analyzer1 if sensor_num == 1 else self.analyzer2
+        if active_analyzer.corrected_peaks is not None:
+            self.label_peaks_count.setText(f"Пиков (датчик {sensor_num}): {len(active_analyzer.corrected_peaks)}")
+        else:
+            self.label_peaks_count.setText(f"Пиков (датчик {sensor_num}): 0")
     
     def refresh_ports(self):
         """Обновление списка портов"""
-        self.combo_port.clear()
-        ports = self.sensor.list_ports()
-        
+        self.combo_port1.clear()
+        self.combo_port2.clear()
+        ports = self.sensor1.list_ports()
+
         if ports:
-            self.combo_port.addItems(ports)
+            self.combo_port1.addItems(ports)
+            self.combo_port2.addItems(ports)
             self.log(f"📡 Найдено портов: {len(ports)}")
         else:
             self.log("⚠️ COM-порты не найдены")
-    
-    def connect_sensor(self):
-        """Подключение к датчику"""
-        port = self.combo_port.currentText()
-        baudrate = int(self.combo_baudrate.currentText())
-        
-        if not port:
-            QMessageBox.warning(self, "Ошибка", "Выберите COM-порт")
+
+    def change_baudrate(self, sensor_num):
+        """Изменение baudrate после подключения"""
+        sensor = self.sensor1 if sensor_num == 1 else self.sensor2
+        combo_baudrate = self.combo_baudrate1 if sensor_num == 1 else self.combo_baudrate2
+        combo_port = self.combo_port1 if sensor_num == 1 else self.combo_port2
+        spin_address = self.spin_address1 if sensor_num == 1 else self.spin_address2
+
+        if not sensor.is_connected:
+            QMessageBox.warning(self, "Ошибка", f"Датчик {sensor_num} не подключен")
             return
-        
-        self.log(f"🔌 Подключение к {port} ({baudrate} бод)...")
-        
-        if self.sensor.connect(port, baudrate):
-            self.log("✅ Подключено")
-            self.btn_connect.setEnabled(False)
-            self.btn_identify.setEnabled(True)
-            self.btn_disconnect.setEnabled(True)
-            self.btn_start_record.setEnabled(True)
-            self.combo_port.setEnabled(False)
-            self.combo_baudrate.setEnabled(False)
+
+        new_baudrate = int(combo_baudrate.currentText())
+        port = combo_port.currentText()
+        address = spin_address.value()
+
+        self.log(f"🔄 Изменение baudrate датчика {sensor_num} на {new_baudrate}...")
+
+        try:
+            # Отключаемся
+            sensor.disconnect()
+            time.sleep(0.2)
+
+            # Подключаемся с новым baudrate
+            if sensor.connect(port, new_baudrate, address):
+                self.log(f"✅ Датчик {sensor_num}: baudrate изменен на {new_baudrate}")
+                QMessageBox.information(self, "Успех", f"Baudrate датчика {sensor_num} изменен на {new_baudrate}")
+            else:
+                self.log(f"❌ Датчик {sensor_num}: не удалось переподключиться")
+                QMessageBox.critical(self, "Ошибка", f"Не удалось переподключить датчик {sensor_num}")
+        except Exception as e:
+            self.log(f"❌ Ошибка изменения baudrate: {e}")
+            QMessageBox.critical(self, "Ошибка", f"Ошибка изменения baudrate:\n{e}")
+
+    def connect_sensor(self, sensor_num):
+        """Подключение к датчику"""
+        sensor = self.sensor1 if sensor_num == 1 else self.sensor2
+        combo_port = self.combo_port1 if sensor_num == 1 else self.combo_port2
+        combo_baudrate = self.combo_baudrate1 if sensor_num == 1 else self.combo_baudrate2
+        btn_connect = self.btn_connect1 if sensor_num == 1 else self.btn_connect2
+        btn_identify = self.btn_identify1 if sensor_num == 1 else self.btn_identify2
+        btn_disconnect = self.btn_disconnect1 if sensor_num == 1 else self.btn_disconnect2
+        btn_change_baudrate = self.btn_change_baudrate1 if sensor_num == 1 else self.btn_change_baudrate2
+        label_status = self.label_status1 if sensor_num == 1 else self.label_status2
+
+        port = combo_port.currentText()
+        baudrate = int(combo_baudrate.currentText())
+
+        if not port:
+            QMessageBox.warning(self, "Ошибка", f"Выберите COM-порт для датчика {sensor_num}")
+            return
+
+        self.log(f"🔌 Подключение датчика {sensor_num} к {port} ({baudrate} бод)...")
+
+        if sensor.connect(port, baudrate):
+            self.log(f"✅ Датчик {sensor_num} подключен")
+            label_status.setText("Статус: Подключен")
+            btn_connect.setEnabled(False)
+            btn_identify.setEnabled(True)
+            btn_disconnect.setEnabled(True)
+            btn_change_baudrate.setEnabled(True)
+            combo_port.setEnabled(False)
+
+            # Проверяем оба датчика для включения кнопки записи
+            if self.sensor1.is_connected and self.sensor2.is_connected:
+                self.btn_start_record.setEnabled(True)
+                self.btn_disconnect_all.setEnabled(True)
+                self.log("✅ Оба датчика подключены! Можно начинать запись.")
         else:
-            QMessageBox.critical(self, "Ошибка", "Не удалось подключиться")
-    
-    def identify_sensor(self):
+            QMessageBox.critical(self, "Ошибка", f"Не удалось подключить датчик {sensor_num}")
+            label_status.setText("Статус: Ошибка подключения")
+
+    def identify_sensor(self, sensor_num):
         """Идентификация датчика"""
-        address = self.spin_address.value()
-        self.log(f"🔍 Идентификация (адрес {address})...")
-        
-        if self.sensor.identify(address):
-            self.log("✅ Идентификация успешна")
+        sensor = self.sensor1 if sensor_num == 1 else self.sensor2
+        spin_address = self.spin_address1 if sensor_num == 1 else self.spin_address2
+        address = spin_address.value()
+
+        self.log(f"🔍 Идентификация датчика {sensor_num} (адрес {address})...")
+
+        if sensor.identify(address):
+            self.log(f"✅ Датчик {sensor_num}: идентификация успешна")
         else:
-            QMessageBox.warning(self, "Ошибка", "Не удалось идентифицировать")
-    
-    def disconnect_sensor(self):
-        """Отключение"""
-        self.sensor.disconnect()
-        self.log("🔌 Отключено")
-        
-        self.btn_connect.setEnabled(True)
-        self.btn_identify.setEnabled(False)
-        self.btn_disconnect.setEnabled(False)
-        self.btn_start_record.setEnabled(False)
-        self.combo_port.setEnabled(True)
-        self.combo_baudrate.setEnabled(True)
+            QMessageBox.warning(self, "Ошибка", f"Не удалось идентифицировать датчик {sensor_num}")
+
+    def disconnect_sensor(self, sensor_num):
+        """Отключение датчика"""
+        sensor = self.sensor1 if sensor_num == 1 else self.sensor2
+        combo_port = self.combo_port1 if sensor_num == 1 else self.combo_port2
+        btn_connect = self.btn_connect1 if sensor_num == 1 else self.btn_connect2
+        btn_identify = self.btn_identify1 if sensor_num == 1 else self.btn_identify2
+        btn_disconnect = self.btn_disconnect1 if sensor_num == 1 else self.btn_disconnect2
+        btn_change_baudrate = self.btn_change_baudrate1 if sensor_num == 1 else self.btn_change_baudrate2
+        label_status = self.label_status1 if sensor_num == 1 else self.label_status2
+
+        sensor.disconnect()
+        self.log(f"🔌 Датчик {sensor_num} отключен")
+        label_status.setText("Статус: Не подключен")
+
+        btn_connect.setEnabled(True)
+        btn_identify.setEnabled(False)
+        btn_disconnect.setEnabled(False)
+        btn_change_baudrate.setEnabled(False)
+        combo_port.setEnabled(True)
+
+        # Отключаем запись если хотя бы один датчик отключен
+        if not (self.sensor1.is_connected and self.sensor2.is_connected):
+            self.btn_start_record.setEnabled(False)
+            self.btn_disconnect_all.setEnabled(False)
+
+    def disconnect_all_sensors(self):
+        """Отключение обоих датчиков"""
+        self.log("🔌 Отключение обоих датчиков...")
+
+        if self.sensor1.is_connected:
+            self.disconnect_sensor(1)
+
+        if self.sensor2.is_connected:
+            self.disconnect_sensor(2)
+
+        self.log("✅ Все датчики отключены")
     
     def start_recording(self):
-        """Начало записи"""
-        if not self.sensor.is_connected:
-            QMessageBox.warning(self, "Ошибка", "Датчик не подключен")
+        """Начало записи с ДВУХ датчиков синхронно"""
+        if not self.sensor1.is_connected or not self.sensor2.is_connected:
+            QMessageBox.warning(self, "Ошибка", "Оба датчика должны быть подключены для записи")
             return
-        
-        address = self.spin_address.value()
-        if not self.sensor.start_stream(address):
-            QMessageBox.critical(self, "Ошибка", "Не удалось запустить поток")
+
+        address1 = self.spin_address1.value()
+        address2 = self.spin_address2.value()
+
+        # Запускаем потоки данных на обоих датчиках
+        if not self.sensor1.start_stream(address1):
+            QMessageBox.critical(self, "Ошибка", "Не удалось запустить поток на датчике 1")
             return
-        
+
+        if not self.sensor2.start_stream(address2):
+            self.sensor1.stop_stream(address1)
+            QMessageBox.critical(self, "Ошибка", "Не удалось запустить поток на датчике 2")
+            return
+
         base_distance = self.spin_base_distance.value()
         measurement_range = self.spin_range.value()
-        
+
         # Переключение на график записи
         self.show_recording_plot()
         self.plot_recording.clear_plot()
         self.plot_buffer = []
-        
-        self.recording_thread = RecordingThread(
-            self.sensor, base_distance, measurement_range
+
+        self.recording_thread = DualSensorRecordingThread(
+            self.sensor1, self.sensor2, base_distance, measurement_range
         )
         self.recording_thread.data_received.connect(self.on_data_received)
         self.recording_thread.recording_finished.connect(self.on_recording_finished)
         self.recording_thread.error_occurred.connect(self.on_recording_error)
-        
+
         self.recording_thread.start()
         self.is_recording = True
-        
+
         self.update_timer.start(100)
-        
-        self.log("🔴 Запись начата")
-        self.label_status.setText("Статус: Идет запись")
+
+        self.log("🔴 Запись ДВУХ датчиков начата")
+        self.label_rec_status.setText("Статус: Идет запись с ДВУХ датчиков")
         self.btn_start_record.setEnabled(False)
         self.btn_stop_record.setEnabled(True)
-        self.btn_disconnect.setEnabled(False)
-    
+        self.btn_disconnect_all.setEnabled(False)
+
     def stop_recording(self):
         """Остановка записи"""
         if self.recording_thread:
             self.recording_thread.stop()
             self.recording_thread.wait()
-        
-        address = self.spin_address.value()
-        self.sensor.stop_stream(address)
-        
+
+        address1 = self.spin_address1.value()
+        address2 = self.spin_address2.value()
+        self.sensor1.stop_stream(address1)
+        self.sensor2.stop_stream(address2)
+
         self.update_timer.stop()
         self.is_recording = False
-        
+
         self.log("⏹️ Запись остановлена")
-        self.label_status.setText("Статус: Остановлена")
+        self.label_rec_status.setText("Статус: Остановлена")
         self.btn_start_record.setEnabled(True)
         self.btn_stop_record.setEnabled(False)
-        self.btn_disconnect.setEnabled(True)
+        self.btn_disconnect_all.setEnabled(True)
     
-    def on_data_received(self, distance, point, time_val):
-        """Обработка данных"""
-        self.plot_buffer.append((time_val, distance))
-        self.label_points.setText(f"Точек: {point}")
+    def on_data_received(self, distance1, distance2, point, time_val):
+        """Обработка данных от ДВУХ датчиков"""
+        # Для графика записи показываем среднее или первый датчик
+        avg_distance = (distance1 + distance2) / 2.0
+        self.plot_buffer.append((time_val, avg_distance))
+        self.label_points.setText(f"Точек: {point} | Датчик 1: {distance1:.2f} мм | Датчик 2: {distance2:.2f} мм")
     
     def update_plot_buffer(self):
         """Обновление графика"""
@@ -1716,323 +1908,443 @@ class MainWindow(QMainWindow):
             self.edit_file.setText(filename)
     
     def load_and_analyze(self):
-        """Загрузка и анализ"""
+        """Загрузка и анализ для ДВУХ датчиков"""
         filename = self.edit_file.text()
-        
+
         if not filename or not Path(filename).exists():
             QMessageBox.warning(self, "Ошибка", "Выберите файл")
             return
-        
+
         self.current_file = filename
         self.log(f"📂 Загрузка: {filename}")
-        
-        if not self.analyzer.load_csv(filename):
-            QMessageBox.critical(self, "Ошибка", "Не удалось загрузить")
-            return
-        
-        if not self.analyzer.normalize_data():
-            QMessageBox.critical(self, "Ошибка", "Ошибка нормировки")
-            return
-        
-        # Переключение на графики анализа
-        self.show_analysis_plots()
-        
-        self.log("✂️ Автообрезка...")
-        success, period, frequency, peaks = self.analyzer.auto_crop_oscillations(1.0)
-        
-        if not success:
-            QMessageBox.warning(self, "Предупреждение", "Автообрезка не удалась")
-            return
-        
-        if peaks is not None:
-            self.analyzer.calculate_logarithmic_decrement(peaks)
-        
-        self.update_analysis_results()
-        self.update_plots()
-        
-        self.log("✅ Анализ завершен")
+
+        # Проверяем тип файла (dual sensor или single sensor)
+        try:
+            test_df = pd.read_csv(filename, nrows=1)
+            is_dual = 'Distance_Sensor1_mm' in test_df.columns and 'Distance_Sensor2_mm' in test_df.columns
+        except:
+            is_dual = False
+
+        if is_dual:
+            self.log("✅ Обнаружен файл с ДВУМЯ датчиками")
+
+            # Загружаем данные для датчика 1
+            if not self.analyzer1.load_csv(filename, sensor_column='Distance_Sensor1_mm'):
+                QMessageBox.critical(self, "Ошибка", "Не удалось загрузить данные датчика 1")
+                return
+
+            # Загружаем данные для датчика 2
+            if not self.analyzer2.load_csv(filename, sensor_column='Distance_Sensor2_mm'):
+                QMessageBox.critical(self, "Ошибка", "Не удалось загрузить данные датчика 2")
+                return
+
+            # Нормировка для обоих датчиков
+            if not self.analyzer1.normalize_data():
+                QMessageBox.critical(self, "Ошибка", "Ошибка нормировки датчика 1")
+                return
+
+            if not self.analyzer2.normalize_data():
+                QMessageBox.critical(self, "Ошибка", "Ошибка нормировки датчика 2")
+                return
+
+            # Переключение на графики анализа
+            self.show_analysis_plots()
+
+            # Автообрезка для обоих датчиков
+            self.log("✂️ Автообрезка датчика 1...")
+            success1, period1, frequency1, peaks1 = self.analyzer1.auto_crop_oscillations(1.0)
+
+            self.log("✂️ Автообрезка датчика 2...")
+            success2, period2, frequency2, peaks2 = self.analyzer2.auto_crop_oscillations(1.0)
+
+            if not success1 or not success2:
+                QMessageBox.warning(self, "Предупреждение", "Автообрезка не удалась для одного или обоих датчиков")
+
+            if peaks1 is not None:
+                self.analyzer1.calculate_logarithmic_decrement(peaks1)
+
+            if peaks2 is not None:
+                self.analyzer2.calculate_logarithmic_decrement(peaks2)
+
+            self.update_analysis_results()
+            self.update_plots()
+
+            self.log("✅ Анализ ДВУХ датчиков завершен")
+
+        else:
+            QMessageBox.information(self, "Информация",
+                                   "Это файл с одним датчиком. Используйте logyze_ui_final.py для анализа.")
+            self.log("⚠️ Файл содержит данные только одного датчика")
     
     def show_recording_plot(self):
         """Показать график записи"""
         self.plot_recording.show()
-        self.plot_time.hide()
-        self.plot_points.hide()
-        
+        self.plot_time_sensor1.hide()
+        self.plot_time_sensor2.hide()
+
         # Удаляем из layout
         while self.right_layout.count():
             self.right_layout.takeAt(0)
-        
+
         self.right_layout.addWidget(self.plot_recording)
-    
+
     def show_analysis_plots(self):
-        """Показать графики анализа"""
+        """Показать графики анализа для ДВУХ датчиков"""
         self.plot_recording.hide()
-        self.plot_time.show()
-        self.plot_points.show()
-        
+        self.plot_time_sensor1.show()
+        self.plot_time_sensor2.show()
+
         while self.right_layout.count():
             self.right_layout.takeAt(0)
-        
-        self.right_layout.addWidget(self.plot_time)
-        self.right_layout.addWidget(self.plot_points)
+
+        # Добавляем заголовки
+        label1 = QLabel("📊 ДАТЧИК 1")
+        label1.setStyleSheet("font-size: 14pt; font-weight: bold; color: #2196F3; padding: 5px;")
+        label1.setAlignment(Qt.AlignCenter)
+
+        label2 = QLabel("📊 ДАТЧИК 2")
+        label2.setStyleSheet("font-size: 14pt; font-weight: bold; color: #4CAF50; padding: 5px;")
+        label2.setAlignment(Qt.AlignCenter)
+
+        self.right_layout.addWidget(label1)
+        self.right_layout.addWidget(self.plot_time_sensor1)
+        self.right_layout.addWidget(label2)
+        self.right_layout.addWidget(self.plot_time_sensor2)
     
     def update_plots(self):
-        """Обновление графиков анализа"""
-        self.plot_time.plot_analysis(self.analyzer, show_peaks=True)
-        self.plot_points.plot_analysis(self.analyzer, show_peaks=False)
-        
-        # Обновление счетчика пиков
-        if self.analyzer.corrected_peaks is not None:
-            self.label_peaks_count.setText(f"Пиков: {len(self.analyzer.corrected_peaks)}")
+        """Обновление графиков анализа для ДВУХ датчиков"""
+        self.plot_time_sensor1.plot_analysis(self.analyzer1, show_peaks=True)
+        self.plot_time_sensor2.plot_analysis(self.analyzer2, show_peaks=True)
+
+        # Обновление счетчика пиков для активного датчика
+        active_analyzer = self.analyzer1 if self.active_sensor == 1 else self.analyzer2
+        if active_analyzer.corrected_peaks is not None:
+            self.label_peaks_count.setText(f"Пиков (датчик {self.active_sensor}): {len(active_analyzer.corrected_peaks)}")
     
     def update_analysis_results(self):
-        """Обновление результатов"""
-        if self.analyzer.current_period:
-            self.label_period.setText(f"Период: {self.analyzer.current_period:.6f} с")
+        """Обновление результатов для ДВУХ датчиков"""
+        # Датчик 1 (колонка 0)
+        if self.analyzer1.current_period:
+            self.results_table.setItem(0, 0, QTableWidgetItem(f"{self.analyzer1.current_period:.6f}"))
         else:
-            self.label_period.setText("Период: -")
-        
-        if self.analyzer.current_frequency:
-            self.label_frequency.setText(f"Частота: {self.analyzer.current_frequency:.2f} Гц")
+            self.results_table.setItem(0, 0, QTableWidgetItem("-"))
+
+        if self.analyzer1.current_frequency:
+            self.results_table.setItem(1, 0, QTableWidgetItem(f"{self.analyzer1.current_frequency:.2f}"))
         else:
-            self.label_frequency.setText("Частота: -")
-        
-        if self.analyzer.log_decrement:
-            self.label_decrement.setText(f"Лог. декремент: {self.analyzer.log_decrement:.6f}")
+            self.results_table.setItem(1, 0, QTableWidgetItem("-"))
+
+        if self.analyzer1.log_decrement:
+            self.results_table.setItem(2, 0, QTableWidgetItem(f"{self.analyzer1.log_decrement:.6f}"))
         else:
-            self.label_decrement.setText("Лог. декремент: -")
-        
-        if self.analyzer.damping_ratio:
-            self.label_damping.setText(f"Коэфф. демпфирования: {self.analyzer.damping_ratio:.6f}")
+            self.results_table.setItem(2, 0, QTableWidgetItem("-"))
+
+        if self.analyzer1.damping_ratio:
+            self.results_table.setItem(3, 0, QTableWidgetItem(f"{self.analyzer1.damping_ratio:.6f}"))
         else:
-            self.label_damping.setText("Коэфф. демпфирования: -")
-        
-        if self.analyzer.loss_factor:
-            self.label_loss.setText(f"Коэфф. потерь: {self.analyzer.loss_factor:.6f}")
+            self.results_table.setItem(3, 0, QTableWidgetItem("-"))
+
+        if self.analyzer1.loss_factor:
+            self.results_table.setItem(4, 0, QTableWidgetItem(f"{self.analyzer1.loss_factor:.6f}"))
         else:
-            self.label_loss.setText("Коэфф. потерь: -")
+            self.results_table.setItem(4, 0, QTableWidgetItem("-"))
+
+        # Датчик 2 (колонка 1)
+        if self.analyzer2.current_period:
+            self.results_table.setItem(0, 1, QTableWidgetItem(f"{self.analyzer2.current_period:.6f}"))
+        else:
+            self.results_table.setItem(0, 1, QTableWidgetItem("-"))
+
+        if self.analyzer2.current_frequency:
+            self.results_table.setItem(1, 1, QTableWidgetItem(f"{self.analyzer2.current_frequency:.2f}"))
+        else:
+            self.results_table.setItem(1, 1, QTableWidgetItem("-"))
+
+        if self.analyzer2.log_decrement:
+            self.results_table.setItem(2, 1, QTableWidgetItem(f"{self.analyzer2.log_decrement:.6f}"))
+        else:
+            self.results_table.setItem(2, 1, QTableWidgetItem("-"))
+
+        if self.analyzer2.damping_ratio:
+            self.results_table.setItem(3, 1, QTableWidgetItem(f"{self.analyzer2.damping_ratio:.6f}"))
+        else:
+            self.results_table.setItem(3, 1, QTableWidgetItem("-"))
+
+        if self.analyzer2.loss_factor:
+            self.results_table.setItem(4, 1, QTableWidgetItem(f"{self.analyzer2.loss_factor:.6f}"))
+        else:
+            self.results_table.setItem(4, 1, QTableWidgetItem("-"))
     
     def toggle_crop_mode(self, checked):
         """Переключение режима обрезки"""
-        self.plot_time.set_crop_mode(checked)
-        self.plot_points.set_crop_mode(checked)
-        
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+        active_plot.set_crop_mode(checked)
+
         if checked:
-            self.log("✂️ Режим обрезки: кликните начало и конец на графике")
+            self.log(f"✂️ Режим обрезки для датчика {self.active_sensor}: кликните начало и конец на графике")
         else:
-            self.log("✂️ Режим обрезки выключен")
-    
+            self.log(f"✂️ Режим обрезки для датчика {self.active_sensor} выключен")
+
     def toggle_add_peak_mode(self, checked):
         """Режим добавления пика"""
-        self.plot_time.set_add_peak_mode(checked)
-        
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        active_plot.set_add_peak_mode(checked)
+
         if checked:
             self.btn_remove_peak.setChecked(False)
-            self.plot_time.set_remove_peak_mode(False)
-            self.log("📍 Кликайте на графике для добавления пиков")
+            active_plot.set_remove_peak_mode(False)
+            self.log(f"📍 Датчик {self.active_sensor}: кликайте на графике для добавления пиков")
         else:
-            self.log("📍 Режим добавления выключен")
-    
+            self.log(f"📍 Режим добавления для датчика {self.active_sensor} выключен")
+
     def toggle_remove_peak_mode(self, checked):
         """Режим удаления пика"""
-        self.plot_time.set_remove_peak_mode(checked)
-        
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        active_plot.set_remove_peak_mode(checked)
+
         if checked:
             self.btn_add_peak.setChecked(False)
-            self.plot_time.set_add_peak_mode(False)
-            self.log("🗑️ Кликайте на пики для удаления")
+            active_plot.set_add_peak_mode(False)
+            self.log(f"🗑️ Датчик {self.active_sensor}: кликайте на пики для удаления")
         else:
-            self.log("🗑️ Режим удаления выключен")
-    
+            self.log(f"🗑️ Режим удаления для датчика {self.active_sensor} выключен")
+
     def show_auto_peaks(self):
         """Показать автоматически найденные пики"""
-        if self.analyzer.processed_data is None:
+        active_analyzer = self.analyzer1 if self.active_sensor == 1 else self.analyzer2
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        if active_analyzer.processed_data is None:
             return
-        
-        period, frequency, peaks = self.analyzer.calculate_period_frequency_improved()
-        
+
+        period, frequency, peaks = active_analyzer.calculate_period_frequency_improved()
+
         if peaks is not None:
-            self.plot_time.peaks = peaks.tolist()
-            self.plot_time.update_peaks_display()
-            self.label_peaks_count.setText(f"Пиков: {len(self.plot_time.peaks)}")
-            self.log(f"✅ Найдено пиков: {len(peaks)}")
+            active_plot.peaks = peaks.tolist()
+            active_plot.update_peaks_display()
+            self.label_peaks_count.setText(f"Пиков (датчик {self.active_sensor}): {len(active_plot.peaks)}")
+            self.log(f"✅ Датчик {self.active_sensor}: найдено пиков: {len(peaks)}")
             self.log("💡 Нажмите '🔄 ПЕРЕСЧИТАТЬ' для обновления результатов")
     
     def apply_crop(self):
         """Применить обрезку"""
-        if self.analyzer.processed_data is None:
+        active_analyzer = self.analyzer1 if self.active_sensor == 1 else self.analyzer2
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        if active_analyzer.processed_data is None:
             return
-        
+
         # Проверяем источник
-        start_val, end_val = self.plot_time.get_crop_values()
-        
+        start_val, end_val = active_plot.get_crop_values()
+
         if start_val is not None and end_val is not None:
             # Визуальный выбор
-            self.log(f"✂️ Обрезка по графику: {start_val:.6f} - {end_val:.6f}")
-            self.analyzer.crop_by_time(start_val, end_val)
+            self.log(f"✂️ Датчик {self.active_sensor}: обрезка по графику: {start_val:.6f} - {end_val:.6f}")
+            active_analyzer.crop_by_time(start_val, end_val)
         elif self.spin_crop_start_time.value() > 0 or self.spin_crop_end_time.value() > 0:
             # По времени
             start_t = self.spin_crop_start_time.value()
             end_t = self.spin_crop_end_time.value()
-            self.log(f"✂️ Обрезка по времени: {start_t} - {end_t} с")
-            self.analyzer.crop_by_time(start_t, end_t)
+            self.log(f"✂️ Датчик {self.active_sensor}: обрезка по времени: {start_t} - {end_t} с")
+            active_analyzer.crop_by_time(start_t, end_t)
         elif self.spin_crop_start_point.value() > 0 or self.spin_crop_end_point.value() > 0:
             # По точкам
             start_p = self.spin_crop_start_point.value()
             end_p = self.spin_crop_end_point.value()
-            self.log(f"✂️ Обрезка по точкам: {start_p} - {end_p}")
-            self.analyzer.crop_by_points(start_p, end_p)
+            self.log(f"✂️ Датчик {self.active_sensor}: обрезка по точкам: {start_p} - {end_p}")
+            active_analyzer.crop_by_points(start_p, end_p)
         else:
             QMessageBox.warning(self, "Ошибка", "Задайте границы обрезки")
             return
-        
+
         # Очистка линий
-        self.plot_time.clear_crop_lines()
-        self.plot_points.clear_crop_lines()
-        
+        active_plot.clear_crop_lines()
+
         # Сброс пиков при обрезке
-        self.plot_time.peaks = []
-        
+        active_plot.peaks = []
+
         # Обновление графиков
         self.update_plots()
-        
+
         self.log("💡 Пики сброшены. Нажмите 'Показать автопики' или добавьте вручную")
         self.log("💡 После коррекции пиков нажмите '🔄 ПЕРЕСЧИТАТЬ'")
-    
+
     def reset_data(self):
         """Сброс к исходным данным"""
-        if self.analyzer.reset_to_original():
-            self.plot_time.clear_crop_lines()
-            self.plot_points.clear_crop_lines()
-            self.plot_time.peaks = []
+        active_analyzer = self.analyzer1 if self.active_sensor == 1 else self.analyzer2
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        if active_analyzer.reset_to_original():
+            active_plot.clear_crop_lines()
+            active_plot.peaks = []
             self.update_plots()
-            self.log("✅ Данные сброшены")
-    
-    def recalculate_characteristics(self):
-        """Пересчет характеристик"""
-        if len(self.plot_time.peaks) >= 2:
-            # Устанавливаем пики в анализатор
-            self.analyzer.set_manual_peaks(self.plot_time.peaks)
-            
-            # Пересчитываем
-            period, frequency, peaks = self.analyzer.calculate_period_frequency_improved()
-            
-            if peaks is not None:
-                self.analyzer.calculate_logarithmic_decrement(peaks)
-            
-            # ВАЖНО: Обновляем результаты И графики
-            self.update_analysis_results()
-            self.update_plots()  # Добавлено обновление графиков!
-            self.label_peaks_count.setText(f"Пиков: {len(self.plot_time.peaks)}")
-    
+            self.log(f"✅ Данные датчика {self.active_sensor} сброшены")
+
     def manual_recalculate(self):
         """РУЧНОЙ пересчет по нажатию кнопки"""
-        if self.analyzer.processed_data is None:
+        active_analyzer = self.analyzer1 if self.active_sensor == 1 else self.analyzer2
+        active_plot = self.plot_time_sensor1 if self.active_sensor == 1 else self.plot_time_sensor2
+
+        if active_analyzer.processed_data is None:
             QMessageBox.warning(self, "Ошибка", "Нет данных для пересчета")
             return
-        
-        if len(self.plot_time.peaks) < 2:
+
+        if len(active_plot.peaks) < 2:
             QMessageBox.warning(self, "Ошибка", "Нужно минимум 2 пика для расчета")
             return
-        
-        self.log("🔄 Пересчет характеристик...")
-        
+
+        self.log(f"🔄 Пересчет характеристик датчика {self.active_sensor}...")
+
         # Устанавливаем пики в анализатор
-        self.analyzer.set_manual_peaks(self.plot_time.peaks)
-        
+        active_analyzer.set_manual_peaks(active_plot.peaks)
+
         # Пересчитываем все характеристики
-        period, frequency, peaks = self.analyzer.calculate_period_frequency_improved()
-        
+        period, frequency, peaks = active_analyzer.calculate_period_frequency_improved()
+
         if peaks is not None:
-            self.analyzer.calculate_logarithmic_decrement(peaks)
-        
+            active_analyzer.calculate_logarithmic_decrement(peaks)
+
         # Обновляем интерфейс
         self.update_analysis_results()
         self.update_plots()
-        self.label_peaks_count.setText(f"Пиков: {len(self.plot_time.peaks)}")
-        
-        self.log("✅ Характеристики пересчитаны!")
-        QMessageBox.information(self, "Успех", "Характеристики успешно пересчитаны!")
+        self.label_peaks_count.setText(f"Пиков (датчик {self.active_sensor}): {len(active_plot.peaks)}")
+
+        self.log(f"✅ Характеристики датчика {self.active_sensor} пересчитаны!")
+        QMessageBox.information(self, "Успех", f"Характеристики датчика {self.active_sensor} успешно пересчитаны!")
 
     
     def save_plot(self):
-        """Сохранение графика в файл"""
-        if self.analyzer.processed_data is None:
+        """Сохранение графиков в файлы"""
+        if self.analyzer1.processed_data is None and self.analyzer2.processed_data is None:
             QMessageBox.warning(self, "Ошибка", "Нет данных для сохранения")
             return
-        
-        filename, _ = QFileDialog.getSaveFileName(
-            self, "Сохранить график", "", 
+
+        base_filename, _ = QFileDialog.getSaveFileName(
+            self, "Сохранить графики", "",
             "PNG Files (*.png);;PDF Files (*.pdf);;All Files (*)"
         )
-        
-        if filename:
+
+        if base_filename:
             try:
-                # Сохраняем график времени (основной)
-                if self.plot_time.save_figure(filename):
-                    self.log(f"✅ График сохранен: {filename}")
-                    QMessageBox.information(self, "Успех", f"График сохранен:\n{filename}")
-                else:
-                    QMessageBox.critical(self, "Ошибка", "Не удалось сохранить график")
+                from pathlib import Path
+                base = Path(base_filename)
+                ext = base.suffix
+
+                # Сохраняем график датчика 1
+                if self.analyzer1.processed_data is not None:
+                    filename1 = str(base.with_name(f"{base.stem}_sensor1{ext}"))
+                    if self.plot_time_sensor1.save_figure(filename1):
+                        self.log(f"✅ График датчика 1 сохранен: {filename1}")
+
+                # Сохраняем график датчика 2
+                if self.analyzer2.processed_data is not None:
+                    filename2 = str(base.with_name(f"{base.stem}_sensor2{ext}"))
+                    if self.plot_time_sensor2.save_figure(filename2):
+                        self.log(f"✅ График датчика 2 сохранен: {filename2}")
+
+                QMessageBox.information(self, "Успех", "Графики сохранены")
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения:\n{e}")
     
     def export_results(self):
-        """Экспорт результатов"""
-        if self.analyzer.processed_data is None:
+        """Экспорт результатов для ДВУХ датчиков"""
+        if self.analyzer1.processed_data is None and self.analyzer2.processed_data is None:
             QMessageBox.warning(self, "Ошибка", "Нет данных для экспорта")
             return
-        
+
         filename, _ = QFileDialog.getSaveFileName(
             self, "Сохранить результаты", "", "Text Files (*.txt);;All Files (*)"
         )
-        
+
         if filename:
             try:
                 with open(filename, 'w', encoding='utf-8') as f:
-                    f.write("=" * 60 + "\n")
-                    f.write("LOGYZE - Результаты анализа затухающих колебаний\n")
-                    f.write("=" * 60 + "\n\n")
-                    
+                    f.write("=" * 80 + "\n")
+                    f.write("LOGYZE ADVANCED - Результаты анализа с ДВУХ датчиков RF603HS\n")
+                    f.write("=" * 80 + "\n\n")
+
                     f.write(f"Файл данных: {self.current_file}\n")
                     f.write(f"Дата анализа: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n\n")
-                    
-                    f.write("-" * 60 + "\n")
-                    f.write("ПАРАМЕТРЫ КОЛЕБАНИЙ\n")
-                    f.write("-" * 60 + "\n")
-                    
-                    if self.analyzer.current_period:
-                        f.write(f"Период (T):                    {self.analyzer.current_period:.6f} с\n")
-                    
-                    if self.analyzer.current_frequency:
-                        f.write(f"Частота (f):                   {self.analyzer.current_frequency:.2f} Гц\n")
-                    
-                    if self.analyzer.log_decrement:
-                        f.write(f"Логарифмический декремент (δ): {self.analyzer.log_decrement:.6f}\n")
-                    
-                    if self.analyzer.damping_ratio:
-                        f.write(f"Коэффициент демпфирования (ζ): {self.analyzer.damping_ratio:.6f}\n")
-                    
-                    if self.analyzer.loss_factor:
-                        f.write(f"Коэффициент потерь (η):        {self.analyzer.loss_factor:.6f}\n")
-                    
-                    f.write("\n")
-                    f.write("-" * 60 + "\n")
-                    f.write("СТАТИСТИКА ДАННЫХ\n")
-                    f.write("-" * 60 + "\n")
-                    f.write(f"Количество точек:              {len(self.analyzer.processed_data)}\n")
-                    
-                    if self.analyzer.corrected_peaks is not None:
-                        f.write(f"Количество пиков:              {len(self.analyzer.corrected_peaks)}\n")
-                        f.write("Примечание:                    Использованы исправленные пики\n")
-                    
-                    f.write(f"Длительность записи:           {self.analyzer.processed_data['Временная_метка'].iloc[-1]:.3f} с\n")
-                    
-                    f.write("\n" + "=" * 60 + "\n")
-                
+
+                    # ДАТЧИК 1
+                    if self.analyzer1.processed_data is not None:
+                        f.write("=" * 80 + "\n")
+                        f.write("ДАТЧИК 1\n")
+                        f.write("=" * 80 + "\n\n")
+
+                        f.write("-" * 80 + "\n")
+                        f.write("ПАРАМЕТРЫ КОЛЕБАНИЙ\n")
+                        f.write("-" * 80 + "\n")
+
+                        if self.analyzer1.current_period:
+                            f.write(f"Период (T):                    {self.analyzer1.current_period:.6f} с\n")
+
+                        if self.analyzer1.current_frequency:
+                            f.write(f"Частота (f):                   {self.analyzer1.current_frequency:.2f} Гц\n")
+
+                        if self.analyzer1.log_decrement:
+                            f.write(f"Логарифмический декремент (δ): {self.analyzer1.log_decrement:.6f}\n")
+
+                        if self.analyzer1.damping_ratio:
+                            f.write(f"Коэффициент демпфирования (ζ): {self.analyzer1.damping_ratio:.6f}\n")
+
+                        if self.analyzer1.loss_factor:
+                            f.write(f"Коэффициент потерь (η):        {self.analyzer1.loss_factor:.6f}\n")
+
+                        f.write("\n")
+                        f.write("-" * 80 + "\n")
+                        f.write("СТАТИСТИКА ДАННЫХ\n")
+                        f.write("-" * 80 + "\n")
+                        f.write(f"Количество точек:              {len(self.analyzer1.processed_data)}\n")
+
+                        if self.analyzer1.corrected_peaks is not None:
+                            f.write(f"Количество пиков:              {len(self.analyzer1.corrected_peaks)}\n")
+
+                        f.write(f"Длительность записи:           {self.analyzer1.processed_data['Временная_метка'].iloc[-1]:.3f} с\n\n")
+
+                    # ДАТЧИК 2
+                    if self.analyzer2.processed_data is not None:
+                        f.write("=" * 80 + "\n")
+                        f.write("ДАТЧИК 2\n")
+                        f.write("=" * 80 + "\n\n")
+
+                        f.write("-" * 80 + "\n")
+                        f.write("ПАРАМЕТРЫ КОЛЕБАНИЙ\n")
+                        f.write("-" * 80 + "\n")
+
+                        if self.analyzer2.current_period:
+                            f.write(f"Период (T):                    {self.analyzer2.current_period:.6f} с\n")
+
+                        if self.analyzer2.current_frequency:
+                            f.write(f"Частота (f):                   {self.analyzer2.current_frequency:.2f} Гц\n")
+
+                        if self.analyzer2.log_decrement:
+                            f.write(f"Логарифмический декремент (δ): {self.analyzer2.log_decrement:.6f}\n")
+
+                        if self.analyzer2.damping_ratio:
+                            f.write(f"Коэффициент демпфирования (ζ): {self.analyzer2.damping_ratio:.6f}\n")
+
+                        if self.analyzer2.loss_factor:
+                            f.write(f"Коэффициент потерь (η):        {self.analyzer2.loss_factor:.6f}\n")
+
+                        f.write("\n")
+                        f.write("-" * 80 + "\n")
+                        f.write("СТАТИСТИКА ДАННЫХ\n")
+                        f.write("-" * 80 + "\n")
+                        f.write(f"Количество точек:              {len(self.analyzer2.processed_data)}\n")
+
+                        if self.analyzer2.corrected_peaks is not None:
+                            f.write(f"Количество пиков:              {len(self.analyzer2.corrected_peaks)}\n")
+
+                        f.write(f"Длительность записи:           {self.analyzer2.processed_data['Временная_метка'].iloc[-1]:.3f} с\n\n")
+
+                    f.write("=" * 80 + "\n")
+
                 self.log(f"✅ Результаты сохранены: {filename}")
                 QMessageBox.information(self, "Успех", f"Результаты сохранены:\n{filename}")
-                
+
             except Exception as e:
                 QMessageBox.critical(self, "Ошибка", f"Ошибка сохранения:\n{e}")
 
